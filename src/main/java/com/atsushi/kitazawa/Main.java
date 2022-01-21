@@ -6,7 +6,10 @@ import java.lang.reflect.Field;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtConstructor;
+import javassist.CtField;
+import javassist.CtMethod;
 import javassist.CtNewConstructor;
+import javassist.CtNewMethod;
 import javassist.Loader;
 import javassist.bytecode.AccessFlag;
 import javassist.bytecode.ClassFile;
@@ -22,10 +25,14 @@ public class Main {
     }
 
     private static void doMain() throws Exception {
+
+    }
+
+    public void addIntegerField(String name) throws Exception {
         ClassPool cp = ClassPool.getDefault();
         ClassFile cf = cp.get("com.atsushi.kitazawa.Person")
                 .getClassFile();
-        FieldInfo f = new FieldInfo(cf.getConstPool(), "hoge", "I");
+        FieldInfo f = new FieldInfo(cf.getConstPool(), name, "I");
         f.setAccessFlags(AccessFlag.PUBLIC);
         cf.addField(f);
 
@@ -58,10 +65,21 @@ public class Main {
         }
         return false;
     }
-}
 
-class MyClassLoader extends ClassLoader {
-    // public MyClassLoader(ClassLoader parent) {
-    // super(parent);
-    // }
+    public Object addSetterMethod(Class<?> clazz) throws Exception {
+        ClassPool cp = ClassPool.getDefault();
+        CtClass cc = cp.get(clazz.getName());
+
+        CtConstructor constructor = CtNewConstructor.defaultConstructor(cc);
+        cc.addConstructor(constructor);
+
+        for (CtField cf : cc.getDeclaredFields()) {
+            CtMethod method = CtNewMethod.setter("set" + cf.getName().toUpperCase(), cf);
+            cc.addMethod(method);
+        }
+
+        Loader cl = new Loader(cp);
+        Object o = cl.loadClass(clazz.getName()).getDeclaredConstructor().newInstance();
+        return o;
+    }
 }
